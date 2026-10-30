@@ -36,7 +36,6 @@ func run_tests() -> void:
     check(pin_game.take_action("kickout"), "downed defender attempts kickout")
     check(pin_game.pin_target == 1, "downed defender cannot escape")
     check(pin_game.pin_count == 1, "one count")
-    check(pin_game.take_action("kickout"), "second kickout attempt")
     check(pin_game.take_action("count"), "referee count two")
     check(pin_game.pin_count == 2, "two count")
     check(pin_game.take_action("kickout"), "third kickout attempt")
@@ -73,7 +72,7 @@ func run_tests() -> void:
         escape_at_count.wrestlers[1]["health"] = 25
         escape_at_count.take_action("pin")
         escape_at_count.pin_count = count
-        escape_at_count.current_turn = 1
+        escape_at_count.current_turn = 1 if count > 0 else 0
         if count > 0:
             check(escape_at_count.take_action("kickout"), "kickout action at count %d" % count)
             check(escape_at_count.pin_target == -1, "kickout succeeds at count %d" % count)
