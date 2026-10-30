@@ -45,5 +45,19 @@ func run_tests() -> void:
     var ended = Combat.new()
     ended.match_over = true
     check(brain.choose_action(ended) == "", "AI stops on match over")
+    # Regression: Birdman must damage a defender who can escape count one.
+    var loop = Combat.new()
+    loop.wrestlers[0]["health"] = 30
+    loop.wrestlers[0]["stamina"] = 0
+    loop.current_turn = 1
+    var loop_steps := 0
+    while not loop.match_over and loop_steps < 500:
+        var act: String = brain.choose_action(loop) if loop.current_turn == 1 else ("kickout" if loop.legal_actions().has("kickout") else "recover")
+        check(loop.legal_actions().has(act), "loop regression legal action step %d" % loop_steps)
+        if not loop.take_action(act):
+            break
+        loop_steps += 1
+    check(loop.match_over, "AI finishes match against escapable passive defender")
+    check(loop_steps < 500, "AI avoids repeat-pin action cap")
     print("APW AI: %d scenarios, %d checks passed, %d failed" % [scenarios, passed, failed])
     quit(0 if failed == 0 else 1)
