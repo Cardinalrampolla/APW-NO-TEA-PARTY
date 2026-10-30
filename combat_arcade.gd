@@ -49,8 +49,8 @@ func _ready() -> void:
     ring.custom_minimum_size = Vector2(0, 210)
     layout.add_child(ring)
     ring_view = RingView.new()
-    ring_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     ring.add_child(ring_view)
+    ring_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     ring_label = Label.new()
     ring_label.text = "GIDEON HARK                        VS                        BIRDMAN PHIL PICASSO"
     ring_label.add_theme_font_size_override("font_size", 23)
@@ -104,6 +104,7 @@ func _run_ai_turns() -> void:
         var action: String = opponent_ai.choose_action(game)
         if action.is_empty() or not game.take_action(action):
             break
+        ring_view.play_move(action, 1, game.pin_target, game.pin_count, game.winner)
         steps += 1
 
 func _restart() -> void:
@@ -126,7 +127,6 @@ func _take_action(action: String) -> void:
         if not is_inside_tree():
             return
         _run_ai_turns()
-        ring_view.play_move("ai", 1, game.pin_target, game.pin_count, game.winner)
         animating = false
         _refresh()
 
@@ -149,7 +149,7 @@ func _refresh() -> void:
     ]
     for child in actions.get_children():
         actions.remove_child(child)
-        child.free()
+        child.queue_free()
     for action in game.legal_actions():
         var button := Button.new()
         button.text = action.to_upper()
