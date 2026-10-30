@@ -56,10 +56,11 @@ func _ready() -> void:
     ring_label.add_theme_font_size_override("font_size", 23)
     ring.add_child(ring_label)
     impact_label = Label.new()
-    impact_label.position = Vector2(24, 100)
-    impact_label.add_theme_font_size_override("font_size", 30)
+    impact_label.position = Vector2(24, 8)
+    impact_label.add_theme_font_size_override("font_size", 20)
     impact_label.add_theme_color_override("font_color", Color("#65f4ff"))
     ring.add_child(impact_label)
+    impact_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     gideon_marker = Label.new()
     gideon_marker.text = "◀ GIDEON  [PINK SINGLET]"
     gideon_marker.position = Vector2(30, 52)
@@ -95,7 +96,8 @@ func _ready() -> void:
 func _toggle_ai() -> void:
     ai_enabled = not ai_enabled
     ai_toggle.text = "BIRDMAN AI: ON" if ai_enabled else "TWO-PLAYER MODE"
-    _run_ai_turns()
+    if not animating:
+        _run_ai_turns()
     _refresh()
 
 func _run_ai_turns() -> void:
