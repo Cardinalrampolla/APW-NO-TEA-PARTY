@@ -63,11 +63,13 @@ func _refresh() -> void:
     var a: Dictionary = game.wrestlers[0]
     var b: Dictionary = game.wrestlers[1]
     var turn_name: String = game.wrestlers[game.current_turn]["name"]
+    var phase_text := "REFEREE COUNT: %d  |  %s" % [game.pin_count, turn_name]
+    if game.match_over:
+        phase_text = "WINNER: " + str(game.wrestlers[game.winner]["name"])
     status_label.text = "%s  HP %d  ST %d       |       %s  HP %d  ST %d\n%s" % [
         a["name"], a["health"], a["stamina"],
         b["name"], b["health"], b["stamina"],
-        "WINNER: " + str(game.wrestlers[game.winner]["name"]) if game.match_over else
-        "REFEREE COUNT: %d  |  %s" % [game.pin_count, turn_name + "'s turn"]
+        phase_text
     ]
     for child in actions.get_children():
         actions.remove_child(child)
