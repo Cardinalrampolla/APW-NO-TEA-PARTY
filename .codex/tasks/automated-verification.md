@@ -1,0 +1,7 @@
+You are the automated-verification task for APW: No Tea Party!. Work only in this Codex-managed Git worktree.
+
+Strengthen verify_prototype.py with meaningful, reproducible static/invariant checks for this Godot prototype and document concise manual Godot test cases where runtime behavior cannot be covered statically. Inspect AGENTS.md, main.gd, main.tscn, project.godot, and README.md. Do not edit main.gd and do not touch or migrate the production HTML game.
+
+Prefer checks that verify behavior-relevant structure over brittle incidental formatting. Cover timeline seek determinism, one-shot impact handling, reduced-motion bypass, and runnable scene/project references where feasible. Keep this task focused on verification; do not make animation implementation changes.
+
+Run the updated automated checks and include the exact commands and observed pass/fail output. If practical, demonstrate that a representative violated invariant is detected without leaving source files modified. Report Godot runtime and visual-review status separately. A task without test evidence is blocked/incomplete, not passed. Include worktree/branch and changed files. Do not commit, apply, cherry-pick, merge, or integrate your changes.

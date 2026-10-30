@@ -1,0 +1,5 @@
+You are the read-only code-quality review task for APW: No Tea Party!. Work only in this Codex-managed Git worktree.
+
+Review the existing Godot prototype and its verification boundary, focusing on correctness risks, deterministic seeking, impact/hitstop behavior, reduced motion, Godot 4.4+ compatibility, and missing tests. Inspect AGENTS.md, main.gd, main.tscn, project.godot, README.md, and verify_prototype.py. Do not edit files and do not touch or migrate the production HTML game.
+
+Report actionable findings first, ordered by severity, with file/line references and concise evidence. Distinguish confirmed defects from risks or test gaps. Run the existing automated verifier if the runtime is available and include the exact command and observed output. Report Godot runtime and visual-review status separately. Do not mark the review complete without test evidence; if checks cannot run, report blocked/incomplete. Include worktree/branch and confirm the review made no changes. Do not commit, apply, cherry-pick, merge, or integrate.
