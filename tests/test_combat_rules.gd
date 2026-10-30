@@ -31,10 +31,10 @@ func run_tests() -> void:
     var pin_game = Combat.new()
     pin_game.wrestlers[1]["health"] = 0
     check(pin_game.take_action("pin"), "pin allowed on downed opponent")
-    check(pin_game.legal_actions() == ["kickout"], "defender kickout phase")
+    check(pin_game.legal_actions() == ["count"], "attacker starts referee count")
+    check(pin_game.take_action("count"), "referee counts one before kickout")
     check(pin_game.take_action("kickout"), "downed defender attempts kickout")
     check(pin_game.pin_target == 1, "downed defender cannot escape")
-    check(pin_game.take_action("count"), "referee count one")
     check(pin_game.pin_count == 1, "one count")
     check(pin_game.take_action("kickout"), "second kickout attempt")
     check(pin_game.take_action("count"), "referee count two")
@@ -46,6 +46,7 @@ func run_tests() -> void:
     var escape_game = Combat.new()
     escape_game.wrestlers[1]["health"] = 25
     check(escape_game.take_action("pin"), "low-health pin allowed")
+    check(escape_game.take_action("count"), "referee starts live-health pin")
     check(escape_game.take_action("kickout"), "live wrestler kicks out")
     check(escape_game.pin_target == -1, "kickout ends pin")
     check(escape_game.current_turn == 1, "kickout gives defender next turn")
@@ -69,11 +70,38 @@ func run_tests() -> void:
         check(probe.legal_actions().has("recover"), "recovery always available at %d" % stamina)
     for count in [0, 1, 2]:
         var escape_at_count = Combat.new()
-        escape_at_count.wrestlers[1]["health"] = 1
+        escape_at_count.wrestlers[1]["health"] = 25
         escape_at_count.take_action("pin")
         escape_at_count.pin_count = count
-        check(escape_at_count.take_action("kickout"), "kickout action at count %d" % count)
-        check(escape_at_count.pin_target == -1, "kickout succeeds at count %d" % count)
+        escape_at_count.current_turn = 1
+        if count > 0:
+            check(escape_at_count.take_action("kickout"), "kickout action at count %d" % count)
+            check(escape_at_count.pin_target == -1, "kickout succeeds at count %d" % count)
+        else:
+            check(not escape_at_count.take_action("kickout"), "no premature kickout at count zero")
+    var nearfall = Combat.new()
+    nearfall.wrestlers[1]["health"] = 25
+    nearfall.wrestlers[1]["stamina"] = 0
+    check(nearfall.take_action("pin"), "pin live low-health target")
+    check(nearfall.current_turn == 0, "pinning wrestler counts first")
+    for count in [1, 2]:
+        check(nearfall.take_action("count"), "nearfall referee count %d" % count)
+        check(nearfall.pin_count == count, "nearfall count exactly %d" % count)
+        check(nearfall.take_action("kickout"), "nearfall kickout attempted %d" % count)
+        check(nearfall.pin_target == 1, "nearfall failed escape holds pin %d" % count)
+        check(nearfall.current_turn == 0, "nearfall returns to pinning wrestler %d" % count)
+    check(nearfall.take_action("count"), "nearfall reaches three")
+    check(nearfall.match_over and nearfall.winner == 0, "live-health three-count awards correct winner")
+    check(nearfall.pin_count == 3, "count exactly three")
+    check(nearfall.legal_actions().is_empty(), "no actions after live-health pin")
+    var late_escape = Combat.new()
+    late_escape.wrestlers[1]["health"] = 25
+    late_escape.wrestlers[1]["stamina"] = 100
+    check(late_escape.take_action("pin"), "high-stamina defender pinned")
+    check(late_escape.take_action("count"), "count one before escape")
+    check(late_escape.take_action("kickout"), "healthy defender kicks out at one")
+    check(late_escape.pin_target == -1 and late_escape.pin_count == 0, "successful kickout clears pin")
+    check(late_escape.current_turn == 1, "successful kickout awards defender turn")
     var illegal = Combat.new()
     var untouched = illegal.state()
     check(not illegal.take_action("teleport"), "illegal action rejected")
