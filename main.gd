@@ -30,9 +30,7 @@ func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo:
         match event.keycode:
             KEY_R:
-                reduced_motion = not reduced_motion
-                if reduced_motion:
-                    hitstop_remaining = 0.0
+                set_reduced_motion(not reduced_motion)
             KEY_P:
                 inspection_paused = not inspection_paused
             KEY_LEFT:
@@ -44,14 +42,27 @@ func _unhandled_input(event: InputEvent) -> void:
             KEY_END:
                 seek_to(DURATION)
             KEY_1:
-                playback_speed = 0.5
+                set_playback_speed(0.5)
             KEY_2:
-                playback_speed = 1.0
+                set_playback_speed(1.0)
             KEY_3:
-                playback_speed = 1.5
+                set_playback_speed(1.5)
             KEY_D:
                 show_debug = not show_debug
         queue_redraw()
+
+func set_playback_speed(speed: float) -> void:
+    # Reject invalid speed values so timeline stepping stays deterministic.
+    playback_speed = clampf(speed, 0.25, 2.0)
+    queue_redraw()
+
+func set_reduced_motion(enabled: bool) -> void:
+    reduced_motion = enabled
+    # Turning accessibility mode on during an active hitstop must resume
+    # timeline progression immediately instead of finishing the freeze.
+    if reduced_motion:
+        hitstop_remaining = 0.0
+    queue_redraw()
 
 func seek_to(t: float) -> void:
     elapsed = clampf(t, 0.0, DURATION)
@@ -72,6 +83,8 @@ func restart() -> void:
 
 func _process(delta: float) -> void:
     if playing and not inspection_paused:
+        if reduced_motion and hitstop_remaining > 0.0:
+            hitstop_remaining = 0.0
         if hitstop_remaining > 0.0:
             hitstop_remaining = maxf(0.0, hitstop_remaining - delta)
         else:
