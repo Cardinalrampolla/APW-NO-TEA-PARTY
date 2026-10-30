@@ -35,58 +35,65 @@ func _draw() -> void:
     var ground := h - 26.0
     var left := Vector2(w * 0.32, ground)
     var right := Vector2(w * 0.68, ground)
-    var impact := motion in ["strike", "grapple", "finisher"]
-    var approach := smoothstep(0.05, 0.34, elapsed)
-    var contact := smoothstep(0.36, 0.62, elapsed)
-    var recovery := smoothstep(0.92, MOVE_TIME, elapsed)
-    var contact_x := w * 0.50
+    var approach := smoothstep(0.08, 0.30, elapsed)
+    var contact := smoothstep(0.34, 0.64, elapsed)
+    var reset := smoothstep(0.98, MOVE_TIME, elapsed)
+    var hold := 1.0 - reset
+    var centre := w * 0.5
     var l_tilt := 0.0
     var r_tilt := 0.0
     var l_arm := 0.0
     var r_arm := 0.0
     var l_lift := 0.0
     var r_lift := 0.0
+    var left_fallen := false
+    var right_fallen := false
+    var impact := motion in ["strike", "grapple", "finisher"]
     if impact:
-        var active := 1.0 - recovery
         if attacker == 0:
-            left.x = lerpf(left.x, contact_x - 31.0, approach * active)
-            right.x = lerpf(right.x, contact_x + 34.0, contact * active)
-            l_arm = approach * active
+            left.x = lerpf(left.x, centre - 26.0, approach * hold)
+            right.x = lerpf(right.x, centre + 29.0, approach * hold)
+            l_arm = approach * hold
             if motion == "strike":
-                r_tilt = contact * 0.65 * active
+                r_tilt = 0.35 * contact * hold
             elif motion == "grapple":
-                r_tilt = contact * 1.20 * active
-                r_lift = contact * 12.0 * active
+                r_tilt = 1.40 * contact * hold
+                right_fallen = contact > 0.7 and reset < 0.5
             else:
-                r_tilt = contact * 1.53 * active
-                r_lift = contact * 22.0 * active
+                r_tilt = 1.53 * contact * hold
+                right_fallen = contact > 0.7 and reset < 0.5
+                l_lift = 16.0 * sin(PI * clampf(elapsed / 0.75, 0.0, 1.0))
         else:
-            right.x = lerpf(right.x, contact_x + 31.0, approach * active)
-            left.x = lerpf(left.x, contact_x - 34.0, contact * active)
-            r_arm = approach * active
+            right.x = lerpf(right.x, centre + 26.0, approach * hold)
+            left.x = lerpf(left.x, centre - 29.0, approach * hold)
+            r_arm = approach * hold
             if motion == "strike":
-                l_tilt = -contact * 0.65 * active
+                l_tilt = -0.35 * contact * hold
             elif motion == "grapple":
-                l_tilt = -contact * 1.20 * active
-                l_lift = contact * 12.0 * active
+                l_tilt = -1.40 * contact * hold
+                left_fallen = contact > 0.7 and reset < 0.5
             else:
-                l_tilt = -contact * 1.53 * active
-                l_lift = contact * 22.0 * active
+                # Birdman's double-underhook DDT: lock up, pull forward, head-first takedown.
+                l_tilt = -1.53 * contact * hold
+                left_fallen = contact > 0.7 and reset < 0.5
+                r_lift = 13.0 * sin(PI * clampf(elapsed / 0.75, 0.0, 1.0))
     if pin_target != -1:
         if pin_target == 0:
-            l_tilt = -1.53
-            left.y += 10.0
-            right.x = left.x + 43.0
+            left_fallen = true
+            left.x = centre - 20.0
+            right.x = centre + 20.0
         else:
-            r_tilt = 1.53
-            right.y += 10.0
-            left.x = right.x - 43.0
-    _fighter(left + Vector2(0, -l_lift), Color("#ff4ac8"), Color("#c99475"), l_tilt, false, l_arm)
-    _fighter(right + Vector2(0, -r_lift), Color("#181a28"), Color("#d3a17d"), r_tilt, true, r_arm)
-    if impact and elapsed >= 0.44 and elapsed < 0.76:
-        var burst := 1.0 - absf(elapsed - 0.56) / 0.16
-        burst = clampf(burst, 0.0, 1.0)
-        draw_arc(Vector2(contact_x, ground - 55), 22.0 + 45.0 * burst, 0, TAU, 20, Color(1.0, 0.91, 0.26, burst), 5.0)
+            right_fallen = true
+            right.x = centre + 20.0
+            left.x = centre - 20.0
+    _fighter(left + Vector2(0, -l_lift), Color("#ff4ac8"), Color("#c99475"), l_tilt, false, l_arm, left_fallen)
+    _fighter(right + Vector2(0, -r_lift), Color("#181a28"), Color("#d3a17d"), r_tilt, true, r_arm, right_fallen)
+    if impact and elapsed >= 0.54 and elapsed < 0.83:
+        var burst := clampf(1.0 - absf(elapsed - 0.66) / 0.15, 0.0, 1.0)
+        draw_arc(Vector2(centre, ground - 35.0), 18.0 + 45.0 * burst, 0.0, TAU, 20, Color(1.0, 0.91, 0.26, burst), 5.0)
+        for i in range(8):
+            var direction := Vector2.RIGHT.rotated(float(i) * TAU / 8.0)
+            draw_line(Vector2(centre, ground - 35.0) + direction * 24.0, Vector2(centre, ground - 35.0) + direction * (35.0 + 35.0 * burst), Color("#fff0a0", burst), 4.0)
     if pin_target != -1:
         var message := "PIN!"
         if count > 0:
@@ -96,22 +103,43 @@ func _draw() -> void:
         var winner_name := "GIDEON WINS!" if victor == 0 else "BIRDMAN WINS!"
         draw_string(ThemeDB.fallback_font, Vector2(w * 0.35, 83), winner_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 29, Color("#6efaff"))
 
-func _fighter(feet: Vector2, gear: Color, skin: Color, tilt: float, bald: bool, arm_reach: float) -> void:
-    var torso := feet + Vector2(0, -52)
-    var lean := Vector2(sin(tilt) * 48.0, (1.0 - cos(tilt)) * 40.0)
-    torso += lean
-    var head := torso + Vector2(0, -41)
-    draw_line(feet + Vector2(-12, 0), torso + Vector2(-13, 13), gear, 15.0, true)
-    draw_line(feet + Vector2(13, 0), torso + Vector2(13, 13), gear, 15.0, true)
-    var arm_offset := 42.0 * arm_reach
-    draw_line(torso + Vector2(-15, -18), torso + Vector2(-34 - arm_offset, 9 - arm_offset * 0.65), skin, 11.0, true)
-    draw_line(torso + Vector2(15, -18), torso + Vector2(34 + arm_offset, 9 - arm_offset * 0.65), skin, 11.0, true)
-    draw_rect(Rect2(torso - Vector2(20, 35), Vector2(40, 48)), gear)
+func _fighter(feet: Vector2, gear: Color, skin: Color, tilt: float, bald: bool, arm_reach: float, fallen: bool) -> void:
+    # Articulated local-space rig. The entire body rotates together on takedown.
+    # When down, shoulders/head lie on the canvas instead of hovering above it.
+    var angle := tilt
+    if fallen:
+        angle = -PI * 0.5 if tilt <= 0.0 else PI * 0.5
+    var origin := feet + Vector2(0.0, -12.0)
+    if fallen:
+        origin.y -= 10.0
+    var facing := 1.0 if bald else -1.0
+    var hip := Vector2(0, -26)
+    var shoulder := Vector2(0, -79)
+    var head := Vector2(0, -106)
+    var foot_l := Vector2(-15, 12)
+    var foot_r := Vector2(15, 12)
+    var elbow_l := Vector2(-30, -60)
+    var elbow_r := Vector2(30, -60)
+    var hand_l := Vector2(-37, -42)
+    var hand_r := Vector2(37, -42)
+    if arm_reach > 0.0:
+        hand_l += Vector2(-facing * 28.0 * arm_reach, -18.0 * arm_reach)
+        hand_r += Vector2(-facing * 28.0 * arm_reach, -18.0 * arm_reach)
+    var transform := Transform2D(angle, origin)
+    var h := transform * hip
+    var sh := transform * shoulder
+    var hd := transform * head
+    draw_line(h, transform * foot_l, gear.darkened(0.22), 15.0, true)
+    draw_line(h, transform * foot_r, gear.darkened(0.22), 15.0, true)
+    draw_line(transform * Vector2(-16, -75), transform * elbow_l, skin, 12.0, true)
+    draw_line(transform * elbow_l, transform * hand_l, skin, 10.0, true)
+    draw_line(transform * Vector2(16, -75), transform * elbow_r, skin, 12.0, true)
+    draw_line(transform * elbow_r, transform * hand_r, skin, 10.0, true)
+    draw_line(h, sh, gear, 39.0, true)
     if not bald:
-        for i in range(3):
-            draw_line(head + Vector2(-15 + i * 15, -6), head + Vector2(-17 + i * 15, 19), Color("#50302d"), 7.0)
-        for i in range(3):
-            draw_line(torso + Vector2(-15 + i * 15, -30), torso + Vector2(-15 + i * 15, 8), Color("#ff89d7"), 4.0)
-    else:
-        draw_line(torso + Vector2(-13, -26), torso + Vector2(14, -9), Color("#b64555"), 4.0)
-    draw_circle(head, 16.0, skin)
+        for stripe in [-11.0, 0.0, 11.0]:
+            draw_line(transform * Vector2(stripe, -40), transform * Vector2(stripe, -70), Color("#ff93d4"), 4.0)
+        draw_circle(hd + Vector2(-5, -4), 20.0, Color("#49302b"))
+    draw_circle(hd, 16.0, skin)
+    if bald:
+        draw_line(hd + Vector2(-7, 11), hd + Vector2(7, 11), Color("#432726"), 4.0)
