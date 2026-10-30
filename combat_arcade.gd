@@ -2,6 +2,7 @@ extends Control
 ## Playable combat UI prototype. All controls are generated in code.
 const Combat = preload("res://combat_rules.gd")
 const OpponentAI = preload("res://combat_ai.gd")
+const RingView = preload("res://combat_ring_view.gd")
 var opponent_ai = OpponentAI.new()
 var ai_enabled := true
 var ai_toggle: Button
@@ -17,6 +18,8 @@ var last_action_count := 0
 var gideon_marker: Label
 var birdman_marker: Label
 var ring_canvas: ColorRect
+var ring_view: Control
+var animating := false
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -45,8 +48,11 @@ func _ready() -> void:
     ring_canvas = ring
     ring.custom_minimum_size = Vector2(0, 210)
     layout.add_child(ring)
+    ring_view = RingView.new()
+    ring_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    ring.add_child(ring_view)
     ring_label = Label.new()
-    ring_label.text = "  GIDEON HARK             VS             BIRDMAN PHIL PICASSO"
+    ring_label.text = "GIDEON HARK                        VS                        BIRDMAN PHIL PICASSO"
     ring_label.add_theme_font_size_override("font_size", 23)
     ring.add_child(ring_label)
     impact_label = Label.new()
@@ -60,12 +66,14 @@ func _ready() -> void:
     gideon_marker.add_theme_font_size_override("font_size", 22)
     gideon_marker.add_theme_color_override("font_color", Color("#ff4ac8"))
     ring.add_child(gideon_marker)
+    gideon_marker.visible = false
     birdman_marker = Label.new()
     birdman_marker.text = "[BLACK GEAR]  BIRDMAN ▶"
     birdman_marker.position = Vector2(460, 52)
     birdman_marker.add_theme_font_size_override("font_size", 22)
     birdman_marker.add_theme_color_override("font_color", Color("#f3e5ff"))
     ring.add_child(birdman_marker)
+    birdman_marker.visible = false
     actions = GridContainer.new()
     actions.columns = 3
     layout.add_child(actions)
@@ -99,13 +107,27 @@ func _run_ai_turns() -> void:
         steps += 1
 
 func _restart() -> void:
+    if animating:
+        return
     game = Combat.new()
+    ring_view.play_move("restart", 0, -1, 0, -1)
     last_action_count = 0
     _refresh()
 
 func _take_action(action: String) -> void:
+    if animating or game.match_over:
+        return
+    var actor: int = game.current_turn
     if game.take_action(action):
+        animating = true
+        ring_view.play_move(action, actor, game.pin_target, game.pin_count, game.winner)
+        _refresh()
+        await get_tree().create_timer(0.6).timeout
+        if not is_inside_tree():
+            return
         _run_ai_turns()
+        ring_view.play_move("ai", 1, game.pin_target, game.pin_count, game.winner)
+        animating = false
         _refresh()
 
 func _refresh() -> void:
@@ -131,6 +153,7 @@ func _refresh() -> void:
     for action in game.legal_actions():
         var button := Button.new()
         button.text = action.to_upper()
+        button.disabled = animating
         button.custom_minimum_size = Vector2(250, 65)
         button.add_theme_font_size_override("font_size", 22)
         button.add_theme_color_override("font_color", Color("#65f4ff"))
