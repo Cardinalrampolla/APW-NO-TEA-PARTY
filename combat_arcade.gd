@@ -14,6 +14,9 @@ var restart_button: Button
 var ring_label: Label
 var impact_label: Label
 var last_action_count := 0
+var gideon_marker: Label
+var birdman_marker: Label
+var ring_canvas: ColorRect
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -39,6 +42,7 @@ func _ready() -> void:
     layout.add_child(status_label)
     var ring := ColorRect.new()
     ring.color = Color("#262a55")
+    ring_canvas = ring
     ring.custom_minimum_size = Vector2(0, 210)
     layout.add_child(ring)
     ring_label = Label.new()
@@ -50,6 +54,18 @@ func _ready() -> void:
     impact_label.add_theme_font_size_override("font_size", 30)
     impact_label.add_theme_color_override("font_color", Color("#65f4ff"))
     ring.add_child(impact_label)
+    gideon_marker = Label.new()
+    gideon_marker.text = "◀ GIDEON  [PINK SINGLET]"
+    gideon_marker.position = Vector2(30, 52)
+    gideon_marker.add_theme_font_size_override("font_size", 22)
+    gideon_marker.add_theme_color_override("font_color", Color("#ff4ac8"))
+    ring.add_child(gideon_marker)
+    birdman_marker = Label.new()
+    birdman_marker.text = "[BLACK GEAR]  BIRDMAN ▶"
+    birdman_marker.position = Vector2(460, 52)
+    birdman_marker.add_theme_font_size_override("font_size", 22)
+    birdman_marker.add_theme_color_override("font_color", Color("#f3e5ff"))
+    ring.add_child(birdman_marker)
     actions = GridContainer.new()
     actions.columns = 3
     layout.add_child(actions)
@@ -130,6 +146,14 @@ func _refresh() -> void:
         impact_label.text = game.log.back().to_upper()
     else:
         impact_label.text = "FIGHT!  CHOOSE YOUR MOVE"
+    gideon_marker.modulate.a = 1.0 if game.current_turn == 0 else 0.55
+    birdman_marker.modulate.a = 1.0 if game.current_turn == 1 else 0.55
+    if game.pin_target != -1:
+        gideon_marker.position.y = 77 if game.pin_target == 0 else 52
+        birdman_marker.position.y = 77 if game.pin_target == 1 else 52
+    else:
+        gideon_marker.position.y = 52
+        birdman_marker.position.y = 52
     if game.log.size() != last_action_count:
         last_action_count = game.log.size()
         impact_label.modulate.a = 0.35
