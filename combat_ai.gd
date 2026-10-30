@@ -11,7 +11,10 @@ func choose_action(game: RefCounted) -> String:
     if actions.has("count"):
         return "count"
     if actions.has("pin"):
-        return "pin"
+        var target: Dictionary = game.wrestlers[game.opponent(game.current_turn)]
+        var escape_score: int = int(target["health"]) + int(target["stamina"]) / 4
+        if escape_score < 30:
+            return "pin"
     if actions.size() == 1:
         return actions[0]
     var own: Dictionary = game.wrestlers[game.current_turn]
