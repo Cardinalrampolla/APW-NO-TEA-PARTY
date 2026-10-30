@@ -42,14 +42,19 @@ func _unhandled_input(event: InputEvent) -> void:
             KEY_END:
                 seek_to(DURATION)
             KEY_1:
-                playback_speed = 0.5
+                set_playback_speed(0.5)
             KEY_2:
-                playback_speed = 1.0
+                set_playback_speed(1.0)
             KEY_3:
-                playback_speed = 1.5
+                set_playback_speed(1.5)
             KEY_D:
                 show_debug = not show_debug
         queue_redraw()
+
+func set_playback_speed(speed: float) -> void:
+    # Reject invalid speed values so timeline stepping stays deterministic.
+    playback_speed = clampf(speed, 0.25, 2.0)
+    queue_redraw()
 
 func set_reduced_motion(enabled: bool) -> void:
     reduced_motion = enabled
