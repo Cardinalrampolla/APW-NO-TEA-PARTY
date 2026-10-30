@@ -11,6 +11,9 @@ var status_label: Label
 var history_label: Label
 var actions: GridContainer
 var restart_button: Button
+var ring_label: Label
+var impact_label: Label
+var last_action_count := 0
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -38,10 +41,15 @@ func _ready() -> void:
     ring.color = Color("#262a55")
     ring.custom_minimum_size = Vector2(0, 210)
     layout.add_child(ring)
-    var ring_label := Label.new()
-    ring_label.text = "  GIDEON HARK             VS             BIRDMAN PHIL PICASSO\n\n  [ WRESTLING RING — CHARACTER SPRITES PENDING ]"
+    ring_label = Label.new()
+    ring_label.text = "  GIDEON HARK             VS             BIRDMAN PHIL PICASSO"
     ring_label.add_theme_font_size_override("font_size", 23)
     ring.add_child(ring_label)
+    impact_label = Label.new()
+    impact_label.position = Vector2(24, 100)
+    impact_label.add_theme_font_size_override("font_size", 30)
+    impact_label.add_theme_color_override("font_color", Color("#65f4ff"))
+    ring.add_child(impact_label)
     actions = GridContainer.new()
     actions.columns = 3
     layout.add_child(actions)
@@ -76,6 +84,7 @@ func _run_ai_turns() -> void:
 
 func _restart() -> void:
     game = Combat.new()
+    last_action_count = 0
     _refresh()
 
 func _take_action(action: String) -> void:
@@ -88,6 +97,11 @@ func _refresh() -> void:
     var b: Dictionary = game.wrestlers[1]
     var turn_name: String = game.wrestlers[game.current_turn]["name"]
     var phase_text := "REFEREE COUNT: %d  |  %s" % [game.pin_count, turn_name]
+    if game.pin_target != -1 and game.current_turn == game.pin_target:
+        var defender: Dictionary = game.wrestlers[game.pin_target]
+        var score: int = int(defender["health"]) + int(defender["stamina"]) / 4
+        var needed: int = 30 if game.pin_count == 1 else 45
+        phase_text += "  |  ESCAPE %d / %d" % [score, needed]
     if game.match_over:
         phase_text = "WINNER: " + str(game.wrestlers[game.winner]["name"])
     status_label.text = "%s  HP %d  ST %d       |       %s  HP %d  ST %d\n%s" % [
@@ -97,7 +111,7 @@ func _refresh() -> void:
     ]
     for child in actions.get_children():
         actions.remove_child(child)
-        child.queue_free()
+        child.free()
     for action in game.legal_actions():
         var button := Button.new()
         button.text = action.to_upper()
@@ -108,3 +122,16 @@ func _refresh() -> void:
         actions.add_child(button)
     var last: Array[String] = game.log.slice(maxi(0, game.log.size() - 5))
     history_label.text = "\n".join(last)
+    if game.match_over:
+        impact_label.text = "THREE COUNT!  %s WINS!" % game.wrestlers[game.winner]["name"]
+    elif game.pin_target != -1:
+        impact_label.text = "PIN!  REFEREE: %d / 3" % game.pin_count
+    elif not game.log.is_empty():
+        impact_label.text = game.log.back().to_upper()
+    else:
+        impact_label.text = "FIGHT!  CHOOSE YOUR MOVE"
+    if game.log.size() != last_action_count:
+        last_action_count = game.log.size()
+        impact_label.modulate.a = 0.35
+        var flash := create_tween()
+        flash.tween_property(impact_label, "modulate:a", 1.0, 0.18)
