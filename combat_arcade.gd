@@ -2,6 +2,7 @@ extends Control
 ## Playable combat UI prototype. All controls are generated in code.
 const Combat = preload("res://combat_rules.gd")
 const OpponentAI = preload("res://combat_ai.gd")
+const RingView = preload("res://combat_ring_view.gd")
 var opponent_ai = OpponentAI.new()
 var ai_enabled := true
 var ai_toggle: Button
@@ -11,6 +12,14 @@ var status_label: Label
 var history_label: Label
 var actions: GridContainer
 var restart_button: Button
+var ring_label: Label
+var impact_label: Label
+var last_action_count := 0
+var gideon_marker: Label
+var birdman_marker: Label
+var ring_canvas: ColorRect
+var ring_view: Control
+var animating := false
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -36,12 +45,36 @@ func _ready() -> void:
     layout.add_child(status_label)
     var ring := ColorRect.new()
     ring.color = Color("#262a55")
+    ring_canvas = ring
     ring.custom_minimum_size = Vector2(0, 210)
     layout.add_child(ring)
-    var ring_label := Label.new()
-    ring_label.text = "  GIDEON HARK             VS             BIRDMAN PHIL PICASSO\n\n  [ WRESTLING RING — CHARACTER SPRITES PENDING ]"
+    ring_view = RingView.new()
+    ring.add_child(ring_view)
+    ring_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    ring_label = Label.new()
+    ring_label.text = "GIDEON HARK                        VS                        BIRDMAN PHIL PICASSO"
     ring_label.add_theme_font_size_override("font_size", 23)
     ring.add_child(ring_label)
+    impact_label = Label.new()
+    impact_label.position = Vector2(24, 8)
+    impact_label.add_theme_font_size_override("font_size", 20)
+    impact_label.add_theme_color_override("font_color", Color("#65f4ff"))
+    ring.add_child(impact_label)
+    impact_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    gideon_marker = Label.new()
+    gideon_marker.text = "◀ GIDEON  [PINK SINGLET]"
+    gideon_marker.position = Vector2(30, 52)
+    gideon_marker.add_theme_font_size_override("font_size", 22)
+    gideon_marker.add_theme_color_override("font_color", Color("#ff4ac8"))
+    ring.add_child(gideon_marker)
+    gideon_marker.visible = false
+    birdman_marker = Label.new()
+    birdman_marker.text = "[BLACK GEAR]  BIRDMAN ▶"
+    birdman_marker.position = Vector2(460, 52)
+    birdman_marker.add_theme_font_size_override("font_size", 22)
+    birdman_marker.add_theme_color_override("font_color", Color("#f3e5ff"))
+    ring.add_child(birdman_marker)
+    birdman_marker.visible = false
     actions = GridContainer.new()
     actions.columns = 3
     layout.add_child(actions)
@@ -63,7 +96,8 @@ func _ready() -> void:
 func _toggle_ai() -> void:
     ai_enabled = not ai_enabled
     ai_toggle.text = "BIRDMAN AI: ON" if ai_enabled else "TWO-PLAYER MODE"
-    _run_ai_turns()
+    if not animating:
+        _run_ai_turns()
     _refresh()
 
 func _run_ai_turns() -> void:
@@ -72,15 +106,30 @@ func _run_ai_turns() -> void:
         var action: String = opponent_ai.choose_action(game)
         if action.is_empty() or not game.take_action(action):
             break
+        ring_view.play_move(action, 1, game.pin_target, game.pin_count, game.winner)
         steps += 1
 
 func _restart() -> void:
+    if animating:
+        return
     game = Combat.new()
+    ring_view.play_move("restart", 0, -1, 0, -1)
+    last_action_count = 0
     _refresh()
 
 func _take_action(action: String) -> void:
+    if animating or game.match_over:
+        return
+    var actor: int = game.current_turn
     if game.take_action(action):
+        animating = true
+        ring_view.play_move(action, actor, game.pin_target, game.pin_count, game.winner)
+        _refresh()
+        await get_tree().create_timer(1.25).timeout
+        if not is_inside_tree():
+            return
         _run_ai_turns()
+        animating = false
         _refresh()
 
 func _refresh() -> void:
@@ -88,6 +137,11 @@ func _refresh() -> void:
     var b: Dictionary = game.wrestlers[1]
     var turn_name: String = game.wrestlers[game.current_turn]["name"]
     var phase_text := "REFEREE COUNT: %d  |  %s" % [game.pin_count, turn_name]
+    if game.pin_target != -1 and game.current_turn == game.pin_target:
+        var defender: Dictionary = game.wrestlers[game.pin_target]
+        var score: int = int(defender["health"]) + int(defender["stamina"]) / 4
+        var needed: int = 30 if game.pin_count == 1 else 45
+        phase_text += "  |  ESCAPE %d / %d" % [score, needed]
     if game.match_over:
         phase_text = "WINNER: " + str(game.wrestlers[game.winner]["name"])
     status_label.text = "%s  HP %d  ST %d       |       %s  HP %d  ST %d\n%s" % [
@@ -101,6 +155,7 @@ func _refresh() -> void:
     for action in game.legal_actions():
         var button := Button.new()
         button.text = action.to_upper()
+        button.disabled = animating
         button.custom_minimum_size = Vector2(250, 65)
         button.add_theme_font_size_override("font_size", 22)
         button.add_theme_color_override("font_color", Color("#65f4ff"))
@@ -108,3 +163,24 @@ func _refresh() -> void:
         actions.add_child(button)
     var last: Array[String] = game.log.slice(maxi(0, game.log.size() - 5))
     history_label.text = "\n".join(last)
+    if game.match_over:
+        impact_label.text = "THREE COUNT!  %s WINS!" % game.wrestlers[game.winner]["name"]
+    elif game.pin_target != -1:
+        impact_label.text = "PIN!  REFEREE: %d / 3" % game.pin_count
+    elif not game.log.is_empty():
+        impact_label.text = game.log.back().to_upper()
+    else:
+        impact_label.text = "FIGHT!  CHOOSE YOUR MOVE"
+    gideon_marker.modulate.a = 1.0 if game.current_turn == 0 else 0.55
+    birdman_marker.modulate.a = 1.0 if game.current_turn == 1 else 0.55
+    if game.pin_target != -1:
+        gideon_marker.position.y = 77 if game.pin_target == 0 else 52
+        birdman_marker.position.y = 77 if game.pin_target == 1 else 52
+    else:
+        gideon_marker.position.y = 52
+        birdman_marker.position.y = 52
+    if game.log.size() != last_action_count:
+        last_action_count = game.log.size()
+        impact_label.modulate.a = 0.35
+        var flash := create_tween()
+        flash.tween_property(impact_label, "modulate:a", 1.0, 0.18)

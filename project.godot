@@ -1,8 +1,8 @@
 config_version=5
 
 [application]
-config/name="APW - Birdman DDT Animation Prototype"
-run/main_scene="res://main.tscn"
+config/name="APW: No Tea Party!"
+run/main_scene="res://combat_arcade.tscn"
 
 [display]
 window/size/viewport_width=1280

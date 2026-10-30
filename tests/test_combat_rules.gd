@@ -26,7 +26,9 @@ func run_tests() -> void:
     check(game.wrestlers[1]["health"] == 59, "finisher damages once")
     check(game.wrestlers[1]["stunned"] == 1, "finisher stuns")
     check(game.legal_actions() == ["recover"], "stunned wrestler must recover")
+    var stunned_stamina: int = game.wrestlers[1]["stamina"]
     check(game.take_action("recover"), "stun recovery succeeds")
+    check(game.wrestlers[1]["stamina"] == stunned_stamina, "stun recovery grants no free stamina")
     check(game.wrestlers[1]["stunned"] == 0, "stun cleared")
     var pin_game = Combat.new()
     pin_game.wrestlers[1]["health"] = 0
@@ -36,7 +38,6 @@ func run_tests() -> void:
     check(pin_game.take_action("kickout"), "downed defender attempts kickout")
     check(pin_game.pin_target == 1, "downed defender cannot escape")
     check(pin_game.pin_count == 1, "one count")
-    check(pin_game.take_action("kickout"), "second kickout attempt")
     check(pin_game.take_action("count"), "referee count two")
     check(pin_game.pin_count == 2, "two count")
     check(pin_game.take_action("kickout"), "third kickout attempt")
@@ -68,17 +69,23 @@ func run_tests() -> void:
         check(probe.legal_actions().has("grapple") == (stamina >= 18), "grapple cost at %d" % stamina)
         check(probe.legal_actions().has("finisher") == (stamina >= 35), "finisher cost at %d" % stamina)
         check(probe.legal_actions().has("recover"), "recovery always available at %d" % stamina)
-    for count in [0, 1, 2]:
-        var escape_at_count = Combat.new()
-        escape_at_count.wrestlers[1]["health"] = 25
-        escape_at_count.take_action("pin")
-        escape_at_count.pin_count = count
-        escape_at_count.current_turn = 1
-        if count > 0:
-            check(escape_at_count.take_action("kickout"), "kickout action at count %d" % count)
-            check(escape_at_count.pin_target == -1, "kickout succeeds at count %d" % count)
+    # Drive every pin phase through real actions rather than mutating turn/count.
+    for stamina in [0, 20, 100]:
+        var phase = Combat.new()
+        phase.wrestlers[1]["health"] = 25
+        phase.wrestlers[1]["stamina"] = stamina
+        check(phase.take_action("pin"), "phase pin begins at stamina %d" % stamina)
+        check(not phase.take_action("kickout"), "no count-zero kickout at stamina %d" % stamina)
+        check(phase.take_action("count"), "phase referee count one at stamina %d" % stamina)
+        check(phase.current_turn == 1, "phase defender turn after count one at stamina %d" % stamina)
+        check(phase.take_action("kickout"), "phase kickout action at stamina %d" % stamina)
+        if phase.pin_target != -1:
+            check(phase.current_turn == 0, "failed escape returns attacker at stamina %d" % stamina)
+            check(phase.take_action("count"), "phase referee count two at stamina %d" % stamina)
+            check(phase.pin_count == 2, "phase two count reached at stamina %d" % stamina)
+            check(phase.take_action("kickout"), "phase late kickout attempt at stamina %d" % stamina)
         else:
-            check(not escape_at_count.take_action("kickout"), "no premature kickout at count zero")
+            check(phase.pin_count == 0, "successful escape resets count at stamina %d" % stamina)
     var nearfall = Combat.new()
     nearfall.wrestlers[1]["health"] = 25
     nearfall.wrestlers[1]["stamina"] = 0

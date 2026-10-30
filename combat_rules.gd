@@ -64,9 +64,11 @@ func take_action(action: String) -> bool:
         log.append("%s hits %s: %s (%d damage)" % [wrestlers[actor]["name"], wrestlers[target]["name"], action, damage])
         current_turn = target
     elif action == "recover":
-        wrestlers[actor]["stamina"] = mini(MAX_STAMINA, wrestlers[actor]["stamina"] + RECOVERY_STAMINA)
+        var was_stunned: bool = wrestlers[actor]["stunned"] > 0
+        if not was_stunned:
+            wrestlers[actor]["stamina"] = mini(MAX_STAMINA, wrestlers[actor]["stamina"] + RECOVERY_STAMINA)
         wrestlers[actor]["stunned"] = 0
-        log.append("%s recovers" % wrestlers[actor]["name"])
+        log.append("%s shakes off the stun" % wrestlers[actor]["name"] if was_stunned else "%s recovers" % wrestlers[actor]["name"])
         current_turn = target
     elif action == "pin":
         pin_target = target
