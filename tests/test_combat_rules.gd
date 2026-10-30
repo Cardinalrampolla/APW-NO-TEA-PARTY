@@ -49,6 +49,34 @@ func run_tests() -> void:
     check(escape_game.take_action("kickout"), "live wrestler kicks out")
     check(escape_game.pin_target == -1, "kickout ends pin")
     check(escape_game.current_turn == 1, "kickout gives defender next turn")
-    check(not escape_game.take_action("finisher") or escape_game.wrestlers[1]["health"] <= 100, "finisher is gated by stamina")
+    var boundary = Combat.new()
+    boundary.wrestlers[0]["stamina"] = 34
+    var before = boundary.state()
+    check(not boundary.legal_actions().has("finisher"), "34 stamina hides finisher")
+    check(not boundary.take_action("finisher"), "34 stamina rejects finisher")
+    check(boundary.state() == before, "rejected finisher does not mutate state")
+    boundary.wrestlers[0]["stamina"] = 35
+    check(boundary.legal_actions().has("finisher"), "35 stamina exposes finisher")
+    check(boundary.take_action("finisher"), "35 stamina accepts finisher")
+    check(boundary.wrestlers[0]["stamina"] == 0, "finisher spends exactly 35")
+    check(boundary.wrestlers[1]["health"] == 68, "finisher deals exactly 32")
+    for stamina in [0, 7, 8, 17, 18, 34, 35, 100]:
+        var probe = Combat.new()
+        probe.wrestlers[0]["stamina"] = stamina
+        check(probe.legal_actions().has("strike") == (stamina >= 8), "strike cost at %d" % stamina)
+        check(probe.legal_actions().has("grapple") == (stamina >= 18), "grapple cost at %d" % stamina)
+        check(probe.legal_actions().has("finisher") == (stamina >= 35), "finisher cost at %d" % stamina)
+        check(probe.legal_actions().has("recover"), "recovery always available at %d" % stamina)
+    for count in [0, 1, 2]:
+        var escape_at_count = Combat.new()
+        escape_at_count.wrestlers[1]["health"] = 1
+        escape_at_count.take_action("pin")
+        escape_at_count.pin_count = count
+        check(escape_at_count.take_action("kickout"), "kickout action at count %d" % count)
+        check(escape_at_count.pin_target == -1, "kickout succeeds at count %d" % count)
+    var illegal = Combat.new()
+    var untouched = illegal.state()
+    check(not illegal.take_action("teleport"), "illegal action rejected")
+    check(illegal.state() == untouched, "illegal action preserves state")
     print("APW combat rules: %d passed, %d failed" % [passed, failed])
     quit(0 if failed == 0 else 1)
