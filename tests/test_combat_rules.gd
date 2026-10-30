@@ -70,7 +70,7 @@ func run_tests() -> void:
         check(probe.legal_actions().has("recover"), "recovery always available at %d" % stamina)
     for count in [0, 1, 2]:
         var escape_at_count = Combat.new()
-        escape_at_count.wrestlers[1]["health"] = 1
+        escape_at_count.wrestlers[1]["health"] = 25
         escape_at_count.take_action("pin")
         escape_at_count.pin_count = count
         escape_at_count.current_turn = 1
