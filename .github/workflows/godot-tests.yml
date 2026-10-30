@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   combat-tests:
-    name: Headless combat rules and AI tests
+    name: Headless combat, arcade and DDT boot tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -41,14 +41,40 @@ jobs:
         run: |
           set -o pipefail
           godot --headless --path . --script res://tests/test_combat_rules.gd 2>&1 | tee rules.log
+          grep -qE 'APW combat rules: [0-9]+ passed, 0 failed' rules.log || { echo '::error::rules suite missing clean result line'; exit 1; }
 
       - name: Run combat AI tests
         id: ai
         shell: bash
-        if: success() || steps.rules.outcome == 'failure'
+        if: always()
         run: |
           set -o pipefail
           godot --headless --path . --script res://tests/test_combat_ai.gd 2>&1 | tee ai.log
+          grep -qE 'APW AI: [0-9]+ scenarios, [0-9]+ checks passed, 0 failed' ai.log || { echo '::error::AI suite missing clean result line'; exit 1; }
+
+      - name: Boot arcade scene headless
+        id: arcade
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 30 godot --headless --path . res://combat_arcade.tscn --quit 2>&1 | tee arcade.log
+          if grep -qE 'SCRIPT ERROR|Parse Error|Cannot open|Failed to load' arcade.log; then
+            echo '::error::arcade scene reported an error'
+            exit 1
+          fi
+
+      - name: Boot DDT prototype headless
+        id: proto
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 30 godot --headless --path . res://main.tscn --quit 2>&1 | tee proto.log
+          if grep -qE 'SCRIPT ERROR|Parse Error|Cannot open|Failed to load' proto.log; then
+            echo '::error::DDT scene reported an error'
+            exit 1
+          fi
 
       - name: Upload test logs
         if: always()
@@ -58,6 +84,8 @@ jobs:
           path: |
             rules.log
             ai.log
+            arcade.log
+            proto.log
           if-no-files-found: warn
 
       - name: Summarize results
@@ -65,10 +93,12 @@ jobs:
         shell: bash
         run: |
           {
-            echo '## Godot headless combat tests'
+            echo '## Godot headless combat and scene boot tests'
             echo ''
             echo 'Rules: ${{ steps.rules.outcome }}'
             echo 'AI: ${{ steps.ai.outcome }}'
+            echo 'Arcade boot: ${{ steps.arcade.outcome }}'
+            echo 'DDT boot: ${{ steps.proto.outcome }}'
             echo ''
             echo '### Rules log'
             echo '```'
@@ -77,5 +107,13 @@ jobs:
             echo '### AI log'
             echo '```'
             cat ai.log 2>/dev/null || echo '(no log)'
+            echo '```'
+            echo '### Arcade boot log'
+            echo '```'
+            cat arcade.log 2>/dev/null || echo '(no log)'
+            echo '```'
+            echo '### DDT boot log'
+            echo '```'
+            cat proto.log 2>/dev/null || echo '(no log)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
