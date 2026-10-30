@@ -17,3 +17,16 @@ Private development repository for APW.
 
 ## Current state
 Repository initialized for collaboration. The v12.5 HTML baseline has **not** yet been uploaded here. Large single-file HTML builds may exceed connector upload limits. Do not represent repository files as current until verified.
+
+## Isolated Godot DDT prototype
+This `prototype/birdman-ddt` feature branch contains an experimental Godot 4 project. It is separate from the production HTML game and does not replace it.
+
+### Run
+1. Install Godot 4.4 or newer.
+2. Open `project.godot` in Godot and run the project (F6/F5).
+3. Press **Space** to play Birdman's DDT storyboard.
+
+### Static check
+With Python 3 installed, run `python verify_prototype.py` from this directory. This is a source smoke check, not a Godot runtime or visual test.
+
+The wrestlers are procedural stand-ins, not final character art. Review the animation in Godot before accepting visual behavior.

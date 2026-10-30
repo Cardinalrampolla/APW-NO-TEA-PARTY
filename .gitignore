@@ -1,0 +1,7 @@
+.godot/
+.import/
+*.import
+__pycache__/
+*.py[cod]
+.venv/
+.worktrees/
