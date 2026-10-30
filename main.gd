@@ -31,6 +31,8 @@ func _unhandled_input(event: InputEvent) -> void:
         match event.keycode:
             KEY_R:
                 reduced_motion = not reduced_motion
+                if reduced_motion:
+                    hitstop_remaining = 0.0
             KEY_P:
                 inspection_paused = not inspection_paused
             KEY_LEFT:
