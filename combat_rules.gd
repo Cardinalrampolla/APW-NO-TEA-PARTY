@@ -16,7 +16,6 @@ var winner := -1
 var pin_target := -1
 var pin_count := 0
 var log: Array[String] = []
-var rng_seed := 1
 
 func _init(name_a: String = "Gideon Hark", name_b: String = "Birdman Phil Picasso") -> void:
     wrestlers = [
@@ -36,7 +35,11 @@ func legal_actions() -> Array[String]:
         return ["count"]
     if wrestlers[current_turn]["stunned"] > 0:
         return ["recover"]
-    var choices: Array[String] = ["strike", "grapple", "recover"]
+    var choices: Array[String] = ["recover"]
+    if wrestlers[current_turn]["stamina"] >= 8:
+        choices.append("strike")
+    if wrestlers[current_turn]["stamina"] >= 18:
+        choices.append("grapple")
     if wrestlers[current_turn]["stamina"] >= 35:
         choices.append("finisher")
     if wrestlers[opponent(current_turn)]["health"] <= PIN_THRESHOLD:
@@ -74,7 +77,7 @@ func take_action(action: String) -> bool:
         # Deterministic kick-out: 1 or 2 is possible at > 0 health;
         # at 0 health the wrestler cannot escape the third count.
         var health: int = wrestlers[actor]["health"]
-        if health > 0 and pin_count < 2:
+        if health > 0 and pin_count <= 2:
             pin_target = -1
             pin_count = 0
             current_turn = actor
