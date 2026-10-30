@@ -71,13 +71,17 @@ func take_action(action: String) -> bool:
     elif action == "pin":
         pin_target = target
         pin_count = 0
-        current_turn = target
+        current_turn = actor
         log.append("%s attempts a pin!" % wrestlers[actor]["name"])
     elif action == "kickout":
-        # Deterministic kick-out: 1 or 2 is possible at > 0 health;
-        # at 0 health the wrestler cannot escape the third count.
+        # Deterministic prototype: enough remaining health AND stamina
+        # are required to escape; a late two-count is harder to beat.
+        # No random rolls: identical state always yields identical result.
         var health: int = wrestlers[actor]["health"]
-        if health > 0 and pin_count <= 2:
+        var stamina: int = wrestlers[actor]["stamina"]
+        var escape_score: int = health + stamina / 4
+        var escape_threshold: int = 30 if pin_count == 1 else 45
+        if health > 0 and pin_count >= 1 and pin_count <= 2 and escape_score >= escape_threshold:
             pin_target = -1
             pin_count = 0
             current_turn = actor
@@ -90,7 +94,7 @@ func take_action(action: String) -> bool:
         log.append("REFEREE: %d!" % pin_count)
         if pin_count >= 3:
             match_over = true
-            winner = actor
+            winner = opponent(pin_target)
             pin_target = -1
             log.append("%s wins by pinfall!" % wrestlers[actor]["name"])
         else:
