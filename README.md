@@ -29,4 +29,7 @@ This `prototype/birdman-ddt` feature branch contains an experimental Godot 4 pro
 ### Static check
 With Python 3 installed, run `python verify_prototype.py` from this directory. This is a source smoke check, not a Godot runtime or visual test.
 
+### Reduced-motion regression
+With Godot 4.4 or newer, run `godot --headless --path . --script res://tests/test_reduced_motion.gd` to exercise reduced-motion toggles before, during, and after hitstop at each playback speed, along with impact-once, replay, recovery controls, and seek boundaries. The test checks the actual controller but does not replace frame-by-frame visual review.
+
 The wrestlers are procedural stand-ins, not final character art. Review the animation in Godot before accepting visual behavior.
