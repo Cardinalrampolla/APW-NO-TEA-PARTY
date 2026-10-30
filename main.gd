@@ -19,6 +19,7 @@ var playback_speed := 1.0
 var hitstop_remaining := 0.0
 var impact_triggered := false
 var show_debug := true
+var show_help := false
 
 func _ready() -> void:
     set_process(true)
@@ -49,6 +50,8 @@ func _unhandled_input(event: InputEvent) -> void:
                 set_playback_speed(1.5)
             KEY_D:
                 show_debug = not show_debug
+            KEY_H:
+                show_help = not show_help
         queue_redraw()
 
 func set_playback_speed(speed: float) -> void:
@@ -155,6 +158,14 @@ func _draw() -> void:
         var marker_x: float = bar.position.x + bar.size.x * boundary / DURATION
         draw_line(Vector2(marker_x, 625), Vector2(marker_x, 648), Color("ffe26b"), 2.0)
     draw_rect(Rect2(bar.position, Vector2(bar.size.x * elapsed / DURATION, bar.size.y)), Color("35d7ed"))
+    # Label the choreography beats without obscuring the seek ruler.
+    var beat_labels := ["GRAB", "HOOK", "HOLD", "DROP", "HIT", "RISE"]
+    var beat_times := [0.0, 0.42, 0.92, 1.24, IMPACT_AT, 1.88]
+    for i in range(beat_times.size()):
+        var beat_x: float = bar.position.x + bar.size.x * beat_times[i] / DURATION
+        var active_beat := elapsed >= beat_times[i]
+        var beat_color := Color("35d7ed") if active_beat else Color("8a94bd")
+        draw_string(ThemeDB.fallback_font, Vector2(beat_x, 665), beat_labels[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, beat_color)
     draw_circle(Vector2(bar.position.x + bar.size.x * elapsed / DURATION, 637), 8, Color.WHITE)
     draw_rect(Rect2(0, 0, W, 95), Color("090b1d"))
     draw_string(ThemeDB.fallback_font, Vector2(40, 43), "APW: NO TEA PARTY! | BIRDMAN DDT PROTOTYPE", HORIZONTAL_ALIGNMENT_LEFT, -1, 27, Color("f542aa"))
@@ -165,6 +176,13 @@ func _draw() -> void:
         draw_string(ThemeDB.fallback_font, Vector2(105, 610), metrics, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("f3f4ff"))
         draw_string(ThemeDB.fallback_font, Vector2(105, 699), "LEFT/RIGHT: 1/30s  |  HOME/END: SEEK  |  1/2/3: SPEED  |  D: DEBUG  |  R: REDUCED MOTION", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("c5d5fa"))
     draw_string(ThemeDB.fallback_font, Vector2(40, 676), "PROCEDURAL PLACEHOLDERS - NOT FINAL BIRDMAN ART", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("ffe26b"))
+    if show_help:
+        draw_rect(Rect2(290, 160, 700, 215), Color("10132b", 0.95))
+        draw_rect(Rect2(290, 160, 700, 215), Color("35d7ed"), false, 3.0)
+        draw_string(ThemeDB.fallback_font, Vector2(320, 204), "DDT INSPECTION CONTROLS  (H: CLOSE)", HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color("f542aa"))
+        draw_string(ThemeDB.fallback_font, Vector2(320, 251), "SPACE: REPLAY     P: PAUSE     LEFT/RIGHT: FRAME STEP", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+        draw_string(ThemeDB.fallback_font, Vector2(320, 296), "HOME/END: SEEK     1/2/3: SPEED     D: DEBUG", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+        draw_string(ThemeDB.fallback_font, Vector2(320, 341), "R: REDUCED MOTION     H: HELP", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
 
 func _wrestler(pos: Vector2, skin: Color, gear: Color, angle: float, birdman: bool) -> void:
     # All positions are relative to the feet, rotated around the torso pivot.
