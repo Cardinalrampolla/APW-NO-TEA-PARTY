@@ -29,4 +29,7 @@ This `prototype/birdman-ddt` feature branch contains an experimental Godot 4 pro
 ### Static check
 With Python 3 installed, run `python verify_prototype.py` from this directory. This is a source smoke check, not a Godot runtime or visual test.
 
+### Behavioral regression check
+With Godot 4.4 or newer installed, run `godot --headless --path . --script res://tests/behavioral_ddt_test.gd`. The test exits nonzero on a failed behavior check; it does not replace a visual review.
+
 The wrestlers are procedural stand-ins, not final character art. Review the animation in Godot before accepting visual behavior.

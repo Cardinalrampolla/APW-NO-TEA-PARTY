@@ -12,6 +12,7 @@ checks = {
  'speed controls': all(x in script for x in ['KEY_1:', 'KEY_2:', 'KEY_3:']),
  'debug toggle': 'KEY_D:' in script,
  'original silhouettes retained': 'func _wrestler(' in script,
+ 'behavioral regression test exists': (root / 'tests' / 'behavioral_ddt_test.gd').is_file(),
 }
 for name, passed in checks.items():
  print(('PASS' if passed else 'FAIL') + ' ' + name)
