@@ -123,7 +123,7 @@ func _take_action(action: String) -> void:
         animating = true
         ring_view.play_move(action, actor, game.pin_target, game.pin_count, game.winner)
         _refresh()
-        await get_tree().create_timer(0.6).timeout
+        await get_tree().create_timer(1.25).timeout
         if not is_inside_tree():
             return
         _run_ai_turns()
