@@ -1,0 +1,81 @@
+name: Godot Combat Tests
+
+on:
+  push:
+    branches:
+      - 'axel/**'
+      - 'agent/**'
+  pull_request:
+    branches:
+      - 'axel/**'
+      - 'agent/**'
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  combat-tests:
+    name: Headless combat rules and AI tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Godot
+        uses: lihop/setup-godot@v3
+        with:
+          version: 4.7.2-stable
+
+      - name: Confirm Godot version
+        run: godot --version
+
+      - name: Import project assets
+        run: godot --headless --path . --import
+
+      - name: Run combat rules tests
+        id: rules
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_combat_rules.gd 2>&1 | tee rules.log
+
+      - name: Run combat AI tests
+        id: ai
+        shell: bash
+        if: success() || steps.rules.outcome == 'failure'
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_combat_ai.gd 2>&1 | tee ai.log
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-test-logs
+          path: |
+            rules.log
+            ai.log
+          if-no-files-found: warn
+
+      - name: Summarize results
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Godot headless combat tests'
+            echo ''
+            echo 'Rules: ${{ steps.rules.outcome }}'
+            echo 'AI: ${{ steps.ai.outcome }}'
+            echo ''
+            echo '### Rules log'
+            echo '```'
+            cat rules.log 2>/dev/null || echo '(no log)'
+            echo '```'
+            echo '### AI log'
+            echo '```'
+            cat ai.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
