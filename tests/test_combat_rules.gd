@@ -26,7 +26,9 @@ func run_tests() -> void:
     check(game.wrestlers[1]["health"] == 59, "finisher damages once")
     check(game.wrestlers[1]["stunned"] == 1, "finisher stuns")
     check(game.legal_actions() == ["recover"], "stunned wrestler must recover")
+    var stunned_stamina: int = game.wrestlers[1]["stamina"]
     check(game.take_action("recover"), "stun recovery succeeds")
+    check(game.wrestlers[1]["stamina"] == stunned_stamina, "stun recovery grants no free stamina")
     check(game.wrestlers[1]["stunned"] == 0, "stun cleared")
     var pin_game = Combat.new()
     pin_game.wrestlers[1]["health"] = 0
