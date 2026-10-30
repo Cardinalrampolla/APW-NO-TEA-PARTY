@@ -1,6 +1,10 @@
 extends Control
 ## Playable combat UI prototype. All controls are generated in code.
 const Combat = preload("res://combat_rules.gd")
+const OpponentAI = preload("res://combat_ai.gd")
+var opponent_ai = OpponentAI.new()
+var ai_enabled := true
+var ai_toggle: Button
 var game = Combat.new()
 var title_label: Label
 var status_label: Label
@@ -44,6 +48,11 @@ func _ready() -> void:
     history_label = Label.new()
     history_label.add_theme_font_size_override("font_size", 18)
     layout.add_child(history_label)
+    ai_toggle = Button.new()
+    ai_toggle.text = "BIRDMAN AI: ON (TOGGLE FOR TWO PLAYERS)"
+    ai_toggle.custom_minimum_size = Vector2(180, 50)
+    ai_toggle.pressed.connect(_toggle_ai)
+    layout.add_child(ai_toggle)
     restart_button = Button.new()
     restart_button.text = "RESTART MATCH"
     restart_button.custom_minimum_size = Vector2(180, 55)
@@ -51,12 +60,27 @@ func _ready() -> void:
     layout.add_child(restart_button)
     _refresh()
 
+func _toggle_ai() -> void:
+    ai_enabled = not ai_enabled
+    ai_toggle.text = "BIRDMAN AI: ON" if ai_enabled else "TWO-PLAYER MODE"
+    _run_ai_turns()
+    _refresh()
+
+func _run_ai_turns() -> void:
+    var steps := 0
+    while ai_enabled and not game.match_over and game.current_turn == 1 and steps < 8:
+        var action: String = opponent_ai.choose_action(game)
+        if action.is_empty() or not game.take_action(action):
+            break
+        steps += 1
+
 func _restart() -> void:
     game = Combat.new()
     _refresh()
 
 func _take_action(action: String) -> void:
     if game.take_action(action):
+        _run_ai_turns()
         _refresh()
 
 func _refresh() -> void:
